@@ -5,6 +5,8 @@ import json
 import argparse
 import pokemon_pb2
 import time
+from datetime import datetime
+import pymysql
 
 from google.protobuf.internal import encoder
 
@@ -282,8 +284,10 @@ def main():
 
     origin = LatLng.from_degrees(FLOAT_LAT, FLOAT_LONG)
 
+    conn = pymysql.connect(host='#',  user='#', passwd='#', db='#')
+
     counter = 1
-    counter_stop = 4
+    counter_stop = 2
     while counter <= counter_stop:
 
         original_lat = FLOAT_LAT
@@ -331,8 +335,14 @@ def main():
             difflng = diff.lng().degrees
             direction = (('N' if difflat >= 0 else 'S') if abs(difflat) > 1e-4 else '')  + (('E' if difflng >= 0 else 'W') if abs(difflng) > 1e-4 else '')
             with open('test.txt', 'a') as file:
-            	buf = "%s,%s,%s,%s\n" % (poke.pokemon.PokemonId, pokemons[poke.pokemon.PokemonId - 1]['Name'], poke.Latitude, poke.Longitude);
-            	file.write(buf)
+                now = datetime.now()
+                buf = "INSERT IGNORE INTO pokemonInfo (pokemonName, latitude, longitude, hour, minute, createdDate) VALUES(\'%s\',%s,%s,%s,%s,\'%s\')" % ( pokemons[poke.pokemon.PokemonId - 1]['Name'], poke.Latitude, poke.Longitude, now.hour, now.minute, now);
+                #file.write(buf)
+                cur = conn.cursor()
+                cur.execute(buf);
+                conn.commit();
+                cur.close()
+
             print("(%s) %s is visible at (%s, %s) for %s seconds (%sm %s from you)" % (poke.pokemon.PokemonId, pokemons[poke.pokemon.PokemonId - 1]['Name'], poke.Latitude, poke.Longitude, poke.TimeTillHiddenMs / 1000, int(origin.get_distance(other).radians * 6366468.241830914), direction))
 
         print('')
@@ -343,7 +353,8 @@ def main():
         #    break       
         set_location_coords(next.lat().degrees, next.lng().degrees, 0)
         counter = counter + 1
-        
+    
+    conn.close()
 
 if __name__ == '__main__':
     main()
